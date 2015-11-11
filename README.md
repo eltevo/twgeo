@@ -1,0 +1,1 @@
+HTM for SQL Server geograpy types
