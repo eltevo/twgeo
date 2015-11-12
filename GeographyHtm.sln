@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Elte.GeographyHtm", "src\Elte.GeographyHtm\Elte.GeographyHtm.csproj", "{044376D0-EA3F-41AE-A3EB-AEF898E88376}"
-EndProject
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Elte.GeographyHtm.Test", "test\Elte.GeographyHtm.Test\Elte.GeographyHtm.Test.csproj", "{928ABB8E-9611-46FF-9FE0-03C8B7BA641D}"
+EndProject
+Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "Elte.GeographyHtm", "src\Elte.GeographyHtm\Elte.GeographyHtm.sqlproj", "{2B330D45-F435-4D03-BC75-FD58E2D81F16}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,14 +13,16 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{044376D0-EA3F-41AE-A3EB-AEF898E88376}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{044376D0-EA3F-41AE-A3EB-AEF898E88376}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{044376D0-EA3F-41AE-A3EB-AEF898E88376}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{044376D0-EA3F-41AE-A3EB-AEF898E88376}.Release|Any CPU.Build.0 = Release|Any CPU
 		{928ABB8E-9611-46FF-9FE0-03C8B7BA641D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{928ABB8E-9611-46FF-9FE0-03C8B7BA641D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{928ABB8E-9611-46FF-9FE0-03C8B7BA641D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{928ABB8E-9611-46FF-9FE0-03C8B7BA641D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B330D45-F435-4D03-BC75-FD58E2D81F16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B330D45-F435-4D03-BC75-FD58E2D81F16}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B330D45-F435-4D03-BC75-FD58E2D81F16}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{2B330D45-F435-4D03-BC75-FD58E2D81F16}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B330D45-F435-4D03-BC75-FD58E2D81F16}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B330D45-F435-4D03-BC75-FD58E2D81F16}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
