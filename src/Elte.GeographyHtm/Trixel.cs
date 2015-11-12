@@ -10,9 +10,12 @@ namespace Elte.GeographyHtm
 {
     public struct Trixel : IComparable<Trixel>
     {
-        #region Privatemember variables
+        #region Private member variables
 
         private UInt64 htmID;
+        private int level;
+        private UInt64 area;
+        private Point v0, v1, v2;
 
         #endregion
         #region Public properties
@@ -25,6 +28,32 @@ namespace Elte.GeographyHtm
                 htmID = value;
 
                 ValidateHtmID();
+            }
+        }
+
+        public int Level
+        {
+            get
+            {
+                if (level == 0)
+                {
+                    UpdateLevel();
+                }
+
+                return level;
+            }
+        }
+
+        public UInt64 Area
+        {
+            get
+            {
+                if (area == 0)
+                {
+                    UpdateArea();
+                }
+
+                return area;
             }
         }
 
@@ -46,59 +75,26 @@ namespace Elte.GeographyHtm
             }
         }
 
-        public int Level
-        {
-            get
-            {
-                // Find the highest 1 bit to determine level
-                // Skip first two bits to avoid signed/unsigned problems
-
-                for (int i = 2; i < Constants.HtmIDBits; i += 2)
-                {
-                    if (((htmID << i) & Constants.HtmIDHighBit1) != 0)
-                    {
-                        return (Constants.HtmIDBits - i - 6) / 2;
-                    }
-                }
-
-                throw new Exception("Invalid HTMID");   // *** TODO
-            }
-        }
-
-        public UInt64 PseudoArea
-        {
-            get
-            {
-                UInt64 res = 1;
-
-                for (int i = Constants.HtmLevel - Level; i > 0; i--)
-                {
-                    res <<= 2;
-                }
-
-                return res;
-            }
-        }
-
         #endregion
         #region Constructors and initializers
 
         public Trixel(UInt64 htmID)
         {
             this.htmID = htmID;
+            this.level = 0;
+            this.area = 0;
+            this.v0 = this.v1 = this.v2 = Point.NaN;
 
             ValidateHtmID();
         }
 
         public Trixel(SqlInt64 htmID)
+            : this((UInt64)htmID.Value)
         {
-            this.htmID = (UInt64)htmID.Value;
-
-            ValidateHtmID();
         }
 
         public Trixel(double lon, double lat)
-            :this(new Point(lon, lat))
+            : this(new Point(lon, lat))
         {
         }
 
@@ -109,7 +105,22 @@ namespace Elte.GeographyHtm
 
         public Trixel(Point p)
         {
-            this.htmID = FromPoint(p, Constants.HtmLevel);
+            this.htmID = 0;
+            this.level = 0;
+            this.area = 0;
+            this.v0 = this.v1 = this.v2 = Point.NaN;
+
+            UpdateFromPoint(p, Constants.HtmLevel);
+        }
+
+        private Trixel(UInt64 htmID, int level, UInt64 area, Point v0, Point v1, Point v2)
+        {
+            this.htmID = htmID;
+            this.level = level;
+            this.area = area;
+            this.v0 = v0;
+            this.v1 = v1;
+            this.v2 = v2;
         }
 
         public static Trixel Null
@@ -195,81 +206,47 @@ namespace Elte.GeographyHtm
             }
         }
 
-        public bool IsAncestorOf(Trixel other)
+        private void UpdateLevel()
         {
-            int shifts = Level - other.Level;
+            // Find the highest 1 bit to determine level
+            // Skip first two bits to avoid signed/unsigned problems
 
-            if (shifts < 0)
+            for (int i = 2; i < Constants.HtmIDBits; i += 2)
             {
-                return false;
-            }
-
-            UInt64 descendant = HtmID >> (shifts * 2);
-
-            return (descendant == other);
-        }
-
-        public static UInt64 FromPoint(Point p, int level)
-        {
-            Point v0, v1, v2;
-            Point w0, w1, w2;
-
-            UInt64 htmid = Htm.GetStartPane(p);
-            Htm.GetStartPaneVectors(htmid, out v0, out v1, out v2);
-
-            // Start searching for the children
-            while (level-- > 0)
-            {
-                htmid <<= 2;
-
-                w2 = Point.MidPoint(v0, v1);
-                w0 = Point.MidPoint(v1, v2);
-                w1 = Point.MidPoint(v2, v0);
-
-                if (p.IsInside(v0, w2, w1))
+                if (((htmID << i) & Constants.HtmIDHighBit1) != 0)
                 {
-                    htmid |= 0;
-                    v1 = w2;
-                    v2 = w1;
-                }
-                else if (p.IsInside(v1, w0, w2))
-                {
-                    htmid |= 1;
-                    v0 = v1;
-                    v1 = w0;
-                    v2 = w2;
-                }
-                else if (p.IsInside(v2, w1, w0))
-                {
-                    htmid |= 2;
-                    v0 = v2;
-                    v1 = w1;
-                    v2 = w0;
-                }
-                else if (p.IsInside(w0, w1, w2))
-                {
-                    htmid |= 3;
-                    v0 = w0;
-                    v1 = w1;
-                    v2 = w2;
-                }
-                else
-                {
-                    throw new Exception("Panic in Cartesian2hid");
+                    level = (Constants.HtmIDBits - i - 6) / 2;
+                    return;
                 }
             }
 
-            return htmid;
+            throw new Exception("Invalid HTMID");   // *** TODO
         }
 
-        public Point GetCenter()
+        private void UpdateArea()
         {
-            return Point.MidPoint(GetCorners());
+            area = 1;
+
+            for (int i = Constants.HtmLevel - Level; i > 0; i--)
+            {
+                area <<= 2;
+            }
         }
 
-        public Point[] GetCorners()
+        public void GetCorners(out Point v0, out Point v1, out Point v2)
         {
-            Point v0, v1, v2;
+            if (this.v0.IsNan)
+            {
+                UpdateCorners();
+            }
+
+            v0 = this.v0;
+            v1 = this.v1;
+            v2 = this.v2;
+        }
+
+        public void UpdateCorners()
+        {
             Point w0, w1, w2;
             UInt64 bix;
 
@@ -334,8 +311,80 @@ namespace Elte.GeographyHtm
                         throw new InvalidOperationException();  // *** TODO
                 }
             }
+        }
 
-            return new Point[] { v0, v1, v2 };
+        private void UpdateFromPoint(Point p, int level)
+        {
+            Point w0, w1, w2;
+
+            UInt64 htmid = Htm.GetStartPane(p);
+            Htm.GetStartPaneVectors(htmid, out v0, out v1, out v2);
+
+            // Start searching for the children
+            while (level-- > 0)
+            {
+                htmid <<= 2;
+
+                w2 = Point.MidPoint(v0, v1);
+                w0 = Point.MidPoint(v1, v2);
+                w1 = Point.MidPoint(v2, v0);
+
+                if (p.IsInside(v0, w2, w1))
+                {
+                    htmid |= 0;
+                    v1 = w2;
+                    v2 = w1;
+                }
+                else if (p.IsInside(v1, w0, w2))
+                {
+                    htmid |= 1;
+                    v0 = v1;
+                    v1 = w0;
+                    v2 = w2;
+                }
+                else if (p.IsInside(v2, w1, w0))
+                {
+                    htmid |= 2;
+                    v0 = v2;
+                    v1 = w1;
+                    v2 = w0;
+                }
+                else if (p.IsInside(w0, w1, w2))
+                {
+                    htmid |= 3;
+                    v0 = w0;
+                    v1 = w1;
+                    v2 = w2;
+                }
+                else
+                {
+                    throw new Exception("Panic in Cartesian2hid");
+                }
+            }
+        }
+
+        public bool IsAncestorOf(Trixel other)
+        {
+            int shifts = Level - other.Level;
+
+            if (shifts < 0)
+            {
+                return false;
+            }
+
+            UInt64 descendant = HtmID >> (shifts * 2);
+
+            return (descendant == other);
+        }
+
+        public Point GetCenter()
+        {
+            if (v0.IsNan)
+            {
+                UpdateCorners();
+            }
+
+            return Point.MidPoint(v0, v1, v2);
         }
 
         public Trixel Truncate(int level)
@@ -343,7 +392,31 @@ namespace Elte.GeographyHtm
             return new Trixel((htmID >> 2 * (Level - level)));
         }
 
-        public Range Expand(int targetLevel)
+        public Trixel[] Expand()
+        {
+            if (v0.IsNan)
+            {
+                UpdateCorners();
+            }
+
+            var w0 = Point.MidPoint(v1, v2);
+            var w1 = Point.MidPoint(v2, v0);
+            var w2 = Point.MidPoint(v0, v1);
+
+            int l = level + 1;
+            UInt64 a = Area >> 2;
+            UInt64 id = HtmID << 2;
+
+            return new Trixel[]
+            {
+                new Trixel(id++, l, a, v0, w2, w1),
+                new Trixel(id++, l, a, v1, w0, w2),
+                new Trixel(id++, l, a, v2, w1, w0),
+                new Trixel(id++, l, a, w0, w1, w2),
+            };
+        }
+
+        public Range GetRange(int targetLevel)
         {
             Trixel lo, hi;
 

@@ -16,22 +16,22 @@ namespace Elte.GeographyHtm
         public const double RadianToDegree = 57.295779513082320876798154814105;
         public const double RadianToArcmin = 3437.7467707849392526078892888463;
 
-        public const int HtmLevel = 20;
         public const int HtmIDBits = 64;
+        public const int HtmLevel = 20;
         public const UInt64 HtmIDHighBit1 = 0x2000000000000000UL;
         public const UInt64 HtmIDHighBit2 = 0x1000000000000000UL;
         public const int HtmIDMaxNameLength = 32;
 
         public const int HtmCoverMaxLevel = 8;
 
-        public const UInt64 S0 = 8;
-        public const UInt64 S1 = 9;
-        public const UInt64 S2 = 10;
-        public const UInt64 S3 = 11;
-        public const UInt64 N0 = 12;
-        public const UInt64 N1 = 13;
-        public const UInt64 N2 = 14;
-        public const UInt64 N3 = 15;
+        public const UInt64 S0 = 0x0000000000000008UL;
+        public const UInt64 S1 = 0x0000000000000009UL;
+        public const UInt64 S2 = 0x000000000000000AUL;
+        public const UInt64 S3 = 0x000000000000000BUL;
+        public const UInt64 N0 = 0x000000000000000CUL;
+        public const UInt64 N1 = 0x000000000000000DUL;
+        public const UInt64 N2 = 0x000000000000000EUL;
+        public const UInt64 N3 = 0x000000000000000FUL;
 
         public static readonly Face[] Faces =
         {

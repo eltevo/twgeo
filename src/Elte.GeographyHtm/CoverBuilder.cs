@@ -17,9 +17,9 @@ namespace Elte.GeographyHtm
         private int maxSteps;
         private int currentStep;
 
-        private Queue<SmartTrixel> trixelQueue;
-        private List<SmartTrixel> innerList;
-        private List<SmartTrixel> partialList;
+        private Queue<Trixel> trixelQueue;
+        private List<Trixel> innerList;
+        private List<Trixel> partialList;
 
         private UInt64 queueArea;
         private UInt64 innerArea;
@@ -59,7 +59,7 @@ namespace Elte.GeographyHtm
             var trixel = trixelQueue.Dequeue();
             var triangle = GetTriangle(trixel);
 
-            queueArea -= trixel.Trixel.PseudoArea;
+            queueArea -= trixel.Area;
             currentLevel = trixel.Level;
 
             if (geo.STContains(triangle))
@@ -67,7 +67,7 @@ namespace Elte.GeographyHtm
                 // Inner
 
                 innerList.Add(trixel);
-                innerArea += trixel.PseudoArea;
+                innerArea += trixel.Area;
             }
             else if (geo.STIntersects(triangle))
             {
@@ -79,13 +79,13 @@ namespace Elte.GeographyHtm
                     for (int i = 0; i < v.Length; i++)
                     {
                         trixelQueue.Enqueue(v[i]);
-                        queueArea += v[i].PseudoArea;
+                        queueArea += v[i].Area;
                     }
                 }
                 else
                 {
                     partialList.Add(trixel);
-                    partialArea += trixel.PseudoArea;
+                    partialArea += trixel.Area;
                 }
             }
             else
@@ -100,18 +100,18 @@ namespace Elte.GeographyHtm
             innerArea = 0;
             partialArea = 0;
 
-            trixelQueue = new Queue<SmartTrixel>();
+            trixelQueue = new Queue<Trixel>();
 
             // Add initial octahedron
             for (int i = 0; i < Constants.Faces.Length; i++)
             {
                 var trixel = Constants.Faces[i].Trixel;
-                trixelQueue.Enqueue(new SmartTrixel(trixel));
-                queueArea += trixel.PseudoArea;
+                trixelQueue.Enqueue(trixel);
+                queueArea += trixel.Area;
             }
 
-            innerList = new List<SmartTrixel>();
-            partialList = new List<SmartTrixel>();
+            innerList = new List<Trixel>();
+            partialList = new List<Trixel>();
         }
 
         private bool EvaluateStopCriteria()
@@ -124,19 +124,20 @@ namespace Elte.GeographyHtm
             return true;
         }
 
-        private SqlGeography GetTriangle(SmartTrixel trixel)
+        private SqlGeography GetTriangle(Trixel trixel)
         {
             var geoBuilder = new SqlGeographyBuilder();
             geoBuilder.SetSrid(geo.STSrid.Value);
 
-            var v = trixel.Corners;
+            Point v0, v1, v2;
+            trixel.GetCorners(out v0, out v1, out v2);
             
 
             geoBuilder.BeginGeography(OpenGisGeographyType.Polygon);
-            geoBuilder.BeginFigure(v[0].Lat, v[0].Lon);
-            geoBuilder.AddLine(v[1].Lat, v[1].Lon);
-            geoBuilder.AddLine(v[2].Lat, v[2].Lon);
-            geoBuilder.AddLine(v[0].Lat, v[0].Lon);
+            geoBuilder.BeginFigure(v0.Lat, v0.Lon);
+            geoBuilder.AddLine(v1.Lat, v1.Lon);
+            geoBuilder.AddLine(v2.Lat, v2.Lon);
+            geoBuilder.AddLine(v0.Lat, v0.Lon);
             geoBuilder.EndFigure();
             geoBuilder.EndGeography();
 
