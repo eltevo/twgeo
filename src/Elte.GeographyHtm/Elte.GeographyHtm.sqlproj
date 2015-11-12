@@ -8,7 +8,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectVersion>4.1</ProjectVersion>
     <ProjectGuid>{2b330d45-f435-4d03-bc75-fd58e2d81f16}</ProjectGuid>
-    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql120DatabaseSchemaProvider</DSP>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql110DatabaseSchemaProvider</DSP>
     <OutputType>Database</OutputType>
     <RootPath>
     </RootPath>
@@ -23,6 +23,8 @@
     <SqlServerVerification>False</SqlServerVerification>
     <IncludeCompositeObjects>True</IncludeCompositeObjects>
     <TargetDatabaseSet>True</TargetDatabaseSet>
+    <DefaultSchema>htm</DefaultSchema>
+    <Trustworthy>False</Trustworthy>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <OutputPath>bin\Release\</OutputPath>
@@ -67,6 +69,8 @@
     <Compile Include="Point.cs" />
     <Compile Include="Range.cs" />
     <Compile Include="Trixel.cs" />
+    <Compile Include="SqlFunctions.cs" />
+    <Compile Include="IndexedValue.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Data" />
@@ -76,5 +80,8 @@
     <Reference Include="System" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Serialization" />
+  </ItemGroup>
+  <ItemGroup>
+    <Build Include="SqlFunctions.sql" />
   </ItemGroup>
 </Project>

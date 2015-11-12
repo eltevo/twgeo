@@ -415,7 +415,7 @@ namespace Elte.GeographyHtm
             };
         }
 
-        public Range GetRange(int targetLevel)
+        public Range GetRange(int targetLevel, Markup markup)
         {
             Trixel lo, hi;
 
@@ -433,7 +433,7 @@ namespace Elte.GeographyHtm
                 hi = lo;
             }
 
-            return new Range(lo, hi);
+            return new Range(lo, hi, markup);
         }
 
         public static Trixel Parse(string name)

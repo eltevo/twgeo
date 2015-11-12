@@ -48,6 +48,9 @@ namespace Elte.GeographyHtm
             {
                 Step();
 
+                // All remaining trixels in the queue are partial
+                partialList.AddRange(trixelQueue);
+
                 currentStep++;
             }
             while (EvaluateStopCriteria());
@@ -141,6 +144,25 @@ namespace Elte.GeographyHtm
             geoBuilder.EndGeography();
 
             return geoBuilder.ConstructedGeography;
+        }
+
+        public Range[] GetRanges()
+        {
+            var res = new Range[innerList.Count + partialList.Count];
+
+            int i = 0;
+
+            foreach (var t in innerList)
+            {
+                res[i++] = t.GetRange(maxLevel, Markup.Inner);
+            }
+
+            foreach (var t in partialList)
+            {
+                res[i++] = t.GetRange(maxLevel, Markup.Partial);
+            }
+
+            return res;
         }
     }
 }
