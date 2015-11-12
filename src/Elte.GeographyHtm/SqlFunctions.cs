@@ -11,8 +11,41 @@ namespace Elte.GeographyHtm
 {
     public partial class UserDefinedFunctions
     {
+        protected const string PointTableDefinition = "[i] int, [x] float, [y] float, [z] float, [ra] float, [dec] float";
+        protected const string PointFillMethodName = "FillPoint";
+
         protected const string RangeTableDefinition = "[i] int, [htmIDStart] bigint, [htmIDEnd] bigint, [partial] bit";
         protected const string RangeFillMethodName = "FillRange";
+
+        [SqlFunction(Name = "FromLonLat",
+            DataAccess = DataAccessKind.None, IsDeterministic = true, IsPrecise = false)]
+        public static SqlInt64 FromEq(SqlDouble lon, SqlDouble lat)
+        {
+            Trixel t = new Trixel(lon.Value, lat.Value);
+            return t;
+        }
+
+        [SqlFunction(Name = "GetCenter",
+            TableDefinition = PointTableDefinition, FillRowMethodName = PointFillMethodName,
+            DataAccess = DataAccessKind.None, IsDeterministic = true, IsPrecise = false)]
+        public static IEnumerable GetCenter(SqlInt64 htmID)
+        {
+            Trixel t = htmID;
+            return Index(0, t.GetCenter());
+        }
+
+        [SqlFunction(Name = "GetCorners",
+            TableDefinition = PointTableDefinition, FillRowMethodName = PointFillMethodName,
+            DataAccess = DataAccessKind.None, IsDeterministic = true, IsPrecise = false)]
+        public static IEnumerable GetCorners(SqlInt64 htmID)
+        {
+            Trixel t = htmID;
+            Point v0, v1, v2;
+
+            t.GetCorners(out v0, out v1, out v2);
+
+            return Index(new Point[] { v0, v1, v2 });
+        }
 
         [SqlFunction(Name = "CoverGeography",
                 TableDefinition = RangeTableDefinition, FillRowMethodName = RangeFillMethodName,
@@ -45,6 +78,15 @@ namespace Elte.GeographyHtm
             {
                 res[i] = new IndexedValue<T>(i, values[i]);
             }
+
+            return res;
+        }
+
+        protected static IndexedValue<T>[] Index<T>(int index, T value)
+        {
+            IndexedValue<T>[] res = new IndexedValue<T>[1];
+
+            res[0] = new IndexedValue<T>(index, value);
 
             return res;
         }

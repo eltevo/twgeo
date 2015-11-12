@@ -24,6 +24,18 @@ namespace Elte.GeographyHtm
         private UInt64 innerArea;
         private UInt64 partialArea;
 
+        public int MinLevel
+        {
+            get { return minLevel; }
+            set { minLevel = value; }
+        }
+
+        public int MaxLevel
+        {
+            get { return maxLevel; }
+            set { maxLevel = value; }
+        }
+
         public CoverBuilder(SqlGeography geo)
         {
             InizializeMembers();
@@ -48,12 +60,12 @@ namespace Elte.GeographyHtm
             {
                 Step();
 
-                // All remaining trixels in the queue are partial
-                partialList.AddRange(trixelQueue);
-
                 currentStep++;
             }
             while (EvaluateStopCriteria());
+
+            // All remaining trixels in the queue are partial
+            partialList.AddRange(trixelQueue);
         }
 
         private void Step()
@@ -154,12 +166,12 @@ namespace Elte.GeographyHtm
 
             foreach (var t in innerList)
             {
-                res[i++] = t.GetRange(maxLevel, Markup.Inner);
+                res[i++] = t.GetRange(Constants.HtmLevel, Markup.Inner);
             }
 
             foreach (var t in partialList)
             {
-                res[i++] = t.GetRange(maxLevel, Markup.Partial);
+                res[i++] = t.GetRange(Constants.HtmLevel, Markup.Partial);
             }
 
             return res;

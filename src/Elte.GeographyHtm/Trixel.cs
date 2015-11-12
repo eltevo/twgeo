@@ -406,13 +406,15 @@ namespace Elte.GeographyHtm
             UInt64 a = Area >> 2;
             UInt64 id = HtmID << 2;
 
-            return new Trixel[]
+            var res = new Trixel[]
             {
                 new Trixel(id++, l, a, v0, w2, w1),
                 new Trixel(id++, l, a, v1, w0, w2),
                 new Trixel(id++, l, a, v2, w1, w0),
                 new Trixel(id++, l, a, w0, w1, w2),
             };
+
+            return res;
         }
 
         public Range GetRange(int targetLevel, Markup markup)
