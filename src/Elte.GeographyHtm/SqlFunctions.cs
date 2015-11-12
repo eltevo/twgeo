@@ -48,5 +48,15 @@ namespace Elte.GeographyHtm
 
             return res;
         }
+
+        public static void FillRange(object obj, out SqlInt32 i, out SqlInt64 lo, out SqlInt64 hi, out SqlBoolean partial)
+        {
+            IndexedValue<Range> r = (IndexedValue<Range>)obj;
+
+            i = new SqlInt32(r.Index);
+            lo = new SqlInt64((Int64)r.Value.Lo.HtmID);
+            hi = new SqlInt64((Int64)r.Value.Hi.HtmID);
+            partial = new SqlBoolean(r.Value.Markup != Markup.Inner);
+        }
     }
 }
