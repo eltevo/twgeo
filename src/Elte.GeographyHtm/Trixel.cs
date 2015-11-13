@@ -17,12 +17,25 @@ namespace Elte.GeographyHtm
         private UInt64 area;
         private Point v0, v1, v2;
 
-        private int geoHash;
         private SqlGeography triangle;
-        private SqlGeography intersection;
 
         #endregion
         #region Public properties
+
+        public Trixel Parent
+        {
+            get
+            {
+                if (htmID > Constants.N3)
+                {
+                    return new Trixel(htmID >> 2);
+                }
+                else
+                {
+                    return Trixel.Null;
+                }
+            }
+        }
 
         public UInt64 HtmID
         {
@@ -60,7 +73,7 @@ namespace Elte.GeographyHtm
                 return area;
             }
         }
-
+        
         public bool IsValid
         {
             get
@@ -70,7 +83,7 @@ namespace Elte.GeographyHtm
                     return false;
                 }
 
-                if (htmID < 8)
+                if (htmID > 0 && htmID < 8)
                 {
                     return false;
                 }
@@ -88,9 +101,7 @@ namespace Elte.GeographyHtm
             this.level = 0;
             this.area = 0;
             this.v0 = this.v1 = this.v2 = Point.NaN;
-            this.geoHash = -1;
             this.triangle = null;
-            this.intersection = null;
 
             ValidateHtmID();
         }
@@ -116,14 +127,12 @@ namespace Elte.GeographyHtm
             this.level = 0;
             this.area = 0;
             this.v0 = this.v1 = this.v2 = Point.NaN;
-            this.geoHash = -1;
             this.triangle = null;
-            this.intersection = null;
 
             UpdateFromPoint(p, Constants.HtmLevel);
         }
 
-        private Trixel(UInt64 htmID, int level, UInt64 area, Point v0, Point v1, Point v2)
+        private Trixel(Trixel parent, UInt64 htmID, int level, UInt64 area, Point v0, Point v1, Point v2)
         {
             this.htmID = htmID;
             this.level = level;
@@ -131,9 +140,7 @@ namespace Elte.GeographyHtm
             this.v0 = v0;
             this.v1 = v1;
             this.v2 = v2;
-            this.geoHash = -1;
             this.triangle = null;
-            this.intersection = null;
         }
 
         public static Trixel Null
@@ -326,7 +333,7 @@ namespace Elte.GeographyHtm
             }
         }
 
-        private void UpdateTriangle(SqlGeography geo)
+        internal void UpdateTriangle(SqlGeography geo)
         {
             var geoBuilder = new SqlGeographyBuilder();
             geoBuilder.SetSrid(geo.STSrid.Value);
@@ -342,36 +349,17 @@ namespace Elte.GeographyHtm
             geoBuilder.EndFigure();
             geoBuilder.EndGeography();
 
-            geoHash = geo.GetHashCode();
             triangle = geoBuilder.ConstructedGeography;
         }
 
         public SqlGeography GetTriangle(SqlGeography geo)
         {
-            if (triangle == null || geoHash != geo.GetHashCode())
+            if (triangle == null)
             {
                 UpdateTriangle(geo);
             }
 
             return triangle;
-        }
-
-        private void UpdateIntersection(SqlGeography geo)
-        {
-            var t = GetTriangle(geo);
-
-            geoHash = geo.GetHashCode();
-            intersection = geo.STIntersection(t);
-        }
-
-        public SqlGeography GetIntersection(SqlGeography geo)
-        {
-            if (intersection == null || geoHash != geo.GetHashCode())
-            {
-                UpdateIntersection(geo);
-            }
-
-            return intersection;
         }
 
         private void UpdateFromPoint(Point p, int level)
@@ -453,7 +441,7 @@ namespace Elte.GeographyHtm
             return new Trixel((htmID >> 2 * (Level - level)));
         }
 
-        public Trixel[] Expand()
+        public Trixel[] Split()
         {
             if (v0.IsNan)
             {
@@ -470,10 +458,10 @@ namespace Elte.GeographyHtm
 
             var res = new Trixel[]
             {
-                new Trixel(id++, l, a, v0, w2, w1),
-                new Trixel(id++, l, a, v1, w0, w2),
-                new Trixel(id++, l, a, v2, w1, w0),
-                new Trixel(id++, l, a, w0, w1, w2),
+                new Trixel(this, id++, l, a, v0, w2, w1),
+                new Trixel(this, id++, l, a, v1, w0, w2),
+                new Trixel(this, id++, l, a, v2, w1, w0),
+                new Trixel(this, id++, l, a, w0, w1, w2),
             };
 
             return res;

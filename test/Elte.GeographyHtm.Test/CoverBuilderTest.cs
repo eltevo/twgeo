@@ -43,7 +43,7 @@ namespace Elte.GeographyHtm
 
             b.Execute();
 
-            var rr = b.GetRanges();
+            var rr = b.GetRanges(true);
         }
     }
 }

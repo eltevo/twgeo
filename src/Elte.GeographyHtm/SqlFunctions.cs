@@ -11,10 +11,10 @@ namespace Elte.GeographyHtm
 {
     public partial class UserDefinedFunctions
     {
-        protected const string PointTableDefinition = "[i] int, [x] float, [y] float, [z] float, [ra] float, [dec] float";
+        protected const string PointTableDefinition = "[i] int, [x] float, [y] float, [z] float, [lon] float, [lat] float";
         protected const string PointFillMethodName = "FillPoint";
 
-        protected const string RangeTableDefinition = "[i] int, [htmIDStart] bigint, [htmIDEnd] bigint, [partial] bit";
+        protected const string RangeTableDefinition = "[i] int, [htmIDStart] bigint, [htmIDEnd] bigint, [partial] bit, [geo] geography";
         protected const string RangeFillMethodName = "FillRange";
 
         [SqlFunction(Name = "FromLonLat",
@@ -50,19 +50,19 @@ namespace Elte.GeographyHtm
         [SqlFunction(Name = "CoverGeography",
                 TableDefinition = RangeTableDefinition, FillRowMethodName = RangeFillMethodName,
                 DataAccess = DataAccessKind.None, IsDeterministic = true, IsPrecise = false)]
-        public static IEnumerable Cover(SqlGeography geo)
+        public static IEnumerable Cover(SqlGeography geo, SqlBoolean includeIntersection)
         {
-            return CoverImpl(geo);
+            return CoverImpl(geo, includeIntersection);
         }
 
-        private static IndexedValue<Range>[] CoverImpl(SqlGeography geo)
+        private static IndexedValue<Range>[] CoverImpl(SqlGeography geo, SqlBoolean includeIntersection)
         {
             try
             {
                 var cb = new CoverBuilder(geo);
                 cb.Execute();
 
-                return Index(cb.GetRanges());
+                return Index(cb.GetRanges(includeIntersection.Value));
             }
             catch (Exception)
             {
@@ -72,7 +72,7 @@ namespace Elte.GeographyHtm
 
         protected static IndexedValue<T>[] Index<T>(IList<T> values)
         {
-            IndexedValue<T>[] res = new IndexedValue<T>[values.Count];
+            var res = new IndexedValue<T>[values.Count];
 
             for (int i = 0; i < values.Count; i++)
             {
@@ -84,21 +84,34 @@ namespace Elte.GeographyHtm
 
         protected static IndexedValue<T>[] Index<T>(int index, T value)
         {
-            IndexedValue<T>[] res = new IndexedValue<T>[1];
+            var res = new IndexedValue<T>[1];
 
             res[0] = new IndexedValue<T>(index, value);
 
             return res;
         }
 
-        public static void FillRange(object obj, out SqlInt32 i, out SqlInt64 lo, out SqlInt64 hi, out SqlBoolean partial)
+        public static void FillPoint(object obj, out SqlInt32 i, out SqlDouble x, out SqlDouble y, out SqlDouble z, out SqlDouble lon, out SqlDouble lat)
         {
-            IndexedValue<Range> r = (IndexedValue<Range>)obj;
+            var c = (IndexedValue<Point>)obj;
+
+            i = new SqlInt32(c.Index);
+            x = new SqlDouble(c.Value.X);
+            y = new SqlDouble(c.Value.Y);
+            z = new SqlDouble(c.Value.Z);
+            lon = new SqlDouble(c.Value.Lon);
+            lat = new SqlDouble(c.Value.Lat);
+        }
+
+        public static void FillRange(object obj, out SqlInt32 i, out SqlInt64 lo, out SqlInt64 hi, out SqlBoolean partial, out SqlGeography geo)
+        {
+            var r = (IndexedValue<Range>)obj;
 
             i = new SqlInt32(r.Index);
             lo = new SqlInt64((Int64)r.Value.Lo.HtmID);
             hi = new SqlInt64((Int64)r.Value.Hi.HtmID);
             partial = new SqlBoolean(r.Value.Markup != Markup.Inner);
+            geo = r.Value.Intersection;
         }
     }
 }

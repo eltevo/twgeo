@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.SqlServer.Types;
 
 namespace Elte.GeographyHtm
 {
@@ -10,6 +11,7 @@ namespace Elte.GeographyHtm
         private Trixel lo;
         private Trixel hi;
         private Markup markup;
+        private SqlGeography intersection;
 
         public Trixel Lo
         {
@@ -29,11 +31,18 @@ namespace Elte.GeographyHtm
             set { markup = value; }
         }
 
+        public SqlGeography Intersection
+        {
+            get { return intersection; }
+            set { intersection = value; }
+        }
+
         public Range(Trixel lo, Trixel hi)
         {
             this.lo = lo;
             this.hi = hi;
             this.markup = Markup.Undefined;
+            this.intersection = null;
         }
 
         public Range(Trixel lo, Trixel hi, Markup markup)
@@ -41,6 +50,7 @@ namespace Elte.GeographyHtm
             this.lo = lo;
             this.hi = hi;
             this.markup = markup;
+            this.intersection = null;
         }
 
         public Range(Range range, Markup markup)
@@ -48,6 +58,7 @@ namespace Elte.GeographyHtm
             this.lo = range.lo;
             this.hi = range.hi;
             this.markup = markup;
+            this.intersection = range.intersection;
         }
 
         public bool IsDisjoint(Range b)

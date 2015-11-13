@@ -16,6 +16,7 @@ namespace Elte.GeographyHtm
         private int maxSteps;
         private int currentStep;
 
+        private Dictionary<UInt64, SqlGeography> geoCache;
         private Queue<Trixel> trixelQueue;
         private List<Trixel> innerList;
         private List<Trixel> partialList;
@@ -52,6 +53,27 @@ namespace Elte.GeographyHtm
             this.geo = null;
         }
 
+        private void InitializeBuild()
+        {
+            queueArea = 0;
+            innerArea = 0;
+            partialArea = 0;
+
+            geoCache = new Dictionary<ulong, SqlGeography>();
+            trixelQueue = new Queue<Trixel>();
+
+            // Add initial octahedron
+            for (int i = 0; i < Constants.Faces.Length; i++)
+            {
+                var trixel = Constants.Faces[i].Trixel;
+                trixelQueue.Enqueue(trixel);
+                queueArea += trixel.Area;
+            }
+
+            innerList = new List<Trixel>();
+            partialList = new List<Trixel>();
+        }
+
         public void Execute()
         {
             InitializeBuild();
@@ -71,61 +93,56 @@ namespace Elte.GeographyHtm
         private void Step()
         {
             var trixel = trixelQueue.Dequeue();
-            var triangle = trixel.GetTriangle(geo);
-
+            var g = GetParentGeo(trixel);
+            var triangle = trixel.GetTriangle(g);
+            
             queueArea -= trixel.Area;
             currentLevel = trixel.Level;
 
-            if (geo.STContains(triangle))
+            if (g.Filter(triangle))
             {
-                // Inner
-
-                innerList.Add(trixel);
-                innerArea += trixel.Area;
-            }
-            else if (geo.STIntersects(triangle))
-            {
-                // Partial
-
-                if (currentLevel < maxLevel)
+                if (g.STContains(triangle))
                 {
-                    var v = trixel.Expand();
-                    for (int i = 0; i < v.Length; i++)
-                    {
-                        trixelQueue.Enqueue(v[i]);
-                        queueArea += v[i].Area;
-                    }
+                    // Inner, whole triangle is inside
+                    innerList.Add(trixel);
+                    innerArea += trixel.Area;
                 }
                 else
                 {
-                    partialList.Add(trixel);
-                    partialArea += trixel.Area;
+                    // Partial, compute intersection and store in cache
+                    var intersection = g.STIntersection(triangle);
+                    geoCache.Add(trixel.HtmID, intersection);
+
+                    if (currentLevel < maxLevel)
+                    {
+                        var v = trixel.Split();
+                        for (int i = 0; i < v.Length; i++)
+                        {
+                            trixelQueue.Enqueue(v[i]);
+                            queueArea += v[i].Area;
+                        }
+                    }
+                    else
+                    {
+                        partialList.Add(trixel);
+                        partialArea += trixel.Area;
+                    }
                 }
+            }
+
+            // Outer, do nothing
+        }
+
+        private SqlGeography GetParentGeo(Trixel trixel)
+        {
+            if (geoCache.ContainsKey(trixel.Parent.HtmID))
+            {
+                return geoCache[trixel.Parent.HtmID];
             }
             else
             {
-                // Outer
+                return geo;
             }
-        }
-
-        private void InitializeBuild()
-        {
-            queueArea = 0;
-            innerArea = 0;
-            partialArea = 0;
-
-            trixelQueue = new Queue<Trixel>();
-
-            // Add initial octahedron
-            for (int i = 0; i < Constants.Faces.Length; i++)
-            {
-                var trixel = Constants.Faces[i].Trixel;
-                trixelQueue.Enqueue(trixel);
-                queueArea += trixel.Area;
-            }
-
-            innerList = new List<Trixel>();
-            partialList = new List<Trixel>();
         }
 
         private bool EvaluateStopCriteria()
@@ -138,7 +155,7 @@ namespace Elte.GeographyHtm
             return true;
         }
 
-        public Range[] GetRanges()
+        public Range[] GetRanges(bool includeIntersection)
         {
             var res = new Range[innerList.Count + partialList.Count];
 
@@ -151,7 +168,15 @@ namespace Elte.GeographyHtm
 
             foreach (var t in partialList)
             {
-                res[i++] = t.GetRange(Constants.HtmLevel, Markup.Partial);
+                var r = t.GetRange(Constants.HtmLevel, Markup.Partial);
+
+                if (includeIntersection)
+                {
+                    var g = GetParentGeo(t);
+                    r.Intersection = g.STIntersection(t.GetTriangle(g));
+                }
+
+                res[i++] = r;
             }
 
             return res;
