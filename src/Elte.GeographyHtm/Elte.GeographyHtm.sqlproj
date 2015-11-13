@@ -78,7 +78,7 @@
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Serialization" />
     <Reference Include="Microsoft.SqlServer.Types">
-      <HintPath>..\..\..\..\..\..\Program Files\Microsoft SQL Server\110\Shared\Microsoft.SqlServer.Types.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files\Microsoft SQL Server\120\Shared\Microsoft.SqlServer.Types.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

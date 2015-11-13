@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Data;
+using System.Data.SqlClient;
 using System.Data.SqlTypes;
+using System.IO;
 using Microsoft.SqlServer.Types;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -44,6 +46,76 @@ namespace Elte.GeographyHtm
             b.Execute();
 
             var rr = b.GetRanges(true);
+        }
+
+        [TestMethod]
+        public void TestMethod3()
+        {
+            var t = new Trixel(13667206692864UL);
+            var p = t.Parent;
+
+            var g = SqlGeography.Point(10, 10, 4326);
+
+            var tr = p.GetTriangle(g);
+            var st = p.Split();
+            var str = st[0].GetTriangle(g);
+        }
+
+#if false
+        [TestMethod]
+        public void TestMethod4()
+        {
+            var sql = @"WITH uk AS
+(
+       SELECT geom.Reduce(5000.0).BufferWithCurves(5000) AS map
+       FROM gadm..Region 
+       WHERE Type = 'Country' AND Name_0 = 'United Kingdom'
+),
+ire AS
+(
+       SELECT geom.Reduce(5000.0).BufferWithCurves(5000) AS map
+       FROM gadm..Region 
+       WHERE Type = 'Country' AND Name_0 = 'Ireland'
+)
+SELECT uk.map.STUnion(ire.map)
+FROM uk, ire";
+
+            using (var cn = new SqlConnection("data source=future1;initial catalog=gadm;integrated security=true"))
+            {
+                cn.Open();
+
+                using (var cmd = new SqlCommand(sql, cn))
+                {
+                    using (var dr = cmd.ExecuteReader())
+                    {
+                        dr.Read();
+
+                        var g = new SqlGeography();
+                        g.Read(new BinaryReader(dr.GetSqlBytes(0).Stream));
+                        //var g = (SqlGeography)dr.GetValue(0);
+
+                        using (var outfile = new FileStream(@"C:\Data\dobos\project\GeographyHtm\data\ukire_reduced.bin", FileMode.Create, FileAccess.Write))
+                        {
+                            using (var w = new BinaryWriter(outfile))
+                            {
+                                g.Write(w);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+#endif
+
+        [TestMethod]
+        public void TestMethod5()
+        {
+            var geo = new SqlGeography();
+            geo.Read(new BinaryReader(new MemoryStream(File.ReadAllBytes(@"..\..\..\..\data\ukire.bin"))));
+
+            var b = new CoverBuilder(geo);
+
+            b.Execute();
         }
     }
 }
