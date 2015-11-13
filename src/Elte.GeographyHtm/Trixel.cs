@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Data;
 using System.Data.SqlTypes;
+using Microsoft.SqlServer.Types;
 
 namespace Elte.GeographyHtm
 {
@@ -15,6 +16,10 @@ namespace Elte.GeographyHtm
         private int level;
         private UInt64 area;
         private Point v0, v1, v2;
+
+        private int geoHash;
+        private SqlGeography triangle;
+        private SqlGeography intersection;
 
         #endregion
         #region Public properties
@@ -83,6 +88,9 @@ namespace Elte.GeographyHtm
             this.level = 0;
             this.area = 0;
             this.v0 = this.v1 = this.v2 = Point.NaN;
+            this.geoHash = -1;
+            this.triangle = null;
+            this.intersection = null;
 
             ValidateHtmID();
         }
@@ -108,6 +116,9 @@ namespace Elte.GeographyHtm
             this.level = 0;
             this.area = 0;
             this.v0 = this.v1 = this.v2 = Point.NaN;
+            this.geoHash = -1;
+            this.triangle = null;
+            this.intersection = null;
 
             UpdateFromPoint(p, Constants.HtmLevel);
         }
@@ -120,6 +131,9 @@ namespace Elte.GeographyHtm
             this.v0 = v0;
             this.v1 = v1;
             this.v2 = v2;
+            this.geoHash = -1;
+            this.triangle = null;
+            this.intersection = null;
         }
 
         public static Trixel Null
@@ -310,6 +324,54 @@ namespace Elte.GeographyHtm
                         throw new InvalidOperationException();  // *** TODO
                 }
             }
+        }
+
+        private void UpdateTriangle(SqlGeography geo)
+        {
+            var geoBuilder = new SqlGeographyBuilder();
+            geoBuilder.SetSrid(geo.STSrid.Value);
+
+            Point v0, v1, v2;
+            GetCorners(out v0, out v1, out v2);
+
+            geoBuilder.BeginGeography(OpenGisGeographyType.Polygon);
+            geoBuilder.BeginFigure(v0.Lat, v0.Lon);
+            geoBuilder.AddLine(v1.Lat, v1.Lon);
+            geoBuilder.AddLine(v2.Lat, v2.Lon);
+            geoBuilder.AddLine(v0.Lat, v0.Lon);
+            geoBuilder.EndFigure();
+            geoBuilder.EndGeography();
+
+            geoHash = geo.GetHashCode();
+            triangle = geoBuilder.ConstructedGeography;
+        }
+
+        public SqlGeography GetTriangle(SqlGeography geo)
+        {
+            if (triangle == null || geoHash != geo.GetHashCode())
+            {
+                UpdateTriangle(geo);
+            }
+
+            return triangle;
+        }
+
+        private void UpdateIntersection(SqlGeography geo)
+        {
+            var t = GetTriangle(geo);
+
+            geoHash = geo.GetHashCode();
+            intersection = geo.STIntersection(t);
+        }
+
+        public SqlGeography GetIntersection(SqlGeography geo)
+        {
+            if (intersection == null || geoHash != geo.GetHashCode())
+            {
+                UpdateIntersection(geo);
+            }
+
+            return intersection;
         }
 
         private void UpdateFromPoint(Point p, int level)

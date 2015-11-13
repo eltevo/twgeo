@@ -71,7 +71,7 @@ namespace Elte.GeographyHtm
         private void Step()
         {
             var trixel = trixelQueue.Dequeue();
-            var triangle = GetTriangle(trixel);
+            var triangle = trixel.GetTriangle(geo);
 
             queueArea -= trixel.Area;
             currentLevel = trixel.Level;
@@ -136,26 +136,6 @@ namespace Elte.GeographyHtm
             }
 
             return true;
-        }
-
-        private SqlGeography GetTriangle(Trixel trixel)
-        {
-            var geoBuilder = new SqlGeographyBuilder();
-            geoBuilder.SetSrid(geo.STSrid.Value);
-
-            Point v0, v1, v2;
-            trixel.GetCorners(out v0, out v1, out v2);
-            
-
-            geoBuilder.BeginGeography(OpenGisGeographyType.Polygon);
-            geoBuilder.BeginFigure(v0.Lat, v0.Lon);
-            geoBuilder.AddLine(v1.Lat, v1.Lon);
-            geoBuilder.AddLine(v2.Lat, v2.Lon);
-            geoBuilder.AddLine(v0.Lat, v0.Lon);
-            geoBuilder.EndFigure();
-            geoBuilder.EndGeography();
-
-            return geoBuilder.ConstructedGeography;
         }
 
         public Range[] GetRanges()
