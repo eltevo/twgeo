@@ -111,11 +111,13 @@ FROM uk, ire";
         public void TestMethod5()
         {
             var geo = new SqlGeography();
-            geo.Read(new BinaryReader(new MemoryStream(File.ReadAllBytes(@"..\..\..\..\data\ukire.bin"))));
+            geo.Read(new BinaryReader(new MemoryStream(File.ReadAllBytes(@"..\..\..\..\data\ukire_reduced.bin"))));
 
             var b = new CoverBuilder(geo);
 
             b.Execute();
+
+            var r = b.GetRanges(true);
         }
     }
 }
