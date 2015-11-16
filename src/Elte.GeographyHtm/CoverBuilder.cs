@@ -101,7 +101,11 @@ namespace Elte.GeographyHtm
 
             if (g.Filter(triangle))
             {
-                if (g.STContains(triangle))
+                // Compute intersection
+                var intersection = g.STIntersection(triangle);
+                var area = Math.Abs(intersection.STArea().Value - triangle.STArea().Value);
+
+                if (area < triangle.STArea().Value * 1e-7)
                 {
                     // Inner, whole triangle is inside
                     innerList.Add(trixel);
@@ -109,8 +113,7 @@ namespace Elte.GeographyHtm
                 }
                 else
                 {
-                    // Partial, compute intersection and store in cache
-                    var intersection = g.STIntersection(triangle);
+                    // Partial, store intersection in cache
                     geoCache.Add(trixel.HtmID, intersection);
 
                     if (currentLevel < maxLevel)
