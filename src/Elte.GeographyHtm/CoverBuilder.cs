@@ -12,8 +12,10 @@ namespace Elte.GeographyHtm
 
         private int minLevel;
         private int maxLevel;
-        private int currentLevel;
         private int maxSteps;
+        private bool merge;
+
+        private int currentLevel;
         private int currentStep;
 
         private Dictionary<UInt64, SqlGeography> geoCache;
@@ -37,6 +39,12 @@ namespace Elte.GeographyHtm
             set { maxLevel = value; }
         }
 
+        public bool Merge
+        {
+            get { return merge; }
+            set { merge = value; }
+        }
+
         public CoverBuilder(SqlGeography geo)
         {
             InizializeMembers();
@@ -46,11 +54,15 @@ namespace Elte.GeographyHtm
 
         private void InizializeMembers()
         {
+            this.geo = null;
+
             this.minLevel = -1;
             this.maxLevel = Constants.HtmCoverMaxLevel;
-            this.currentLevel = -1;
+            this.maxSteps = -1;
+            this.merge = true;
 
-            this.geo = null;
+            this.currentLevel = -1;
+            this.currentStep = -1;
         }
 
         private void InitializeBuild()
@@ -160,13 +172,45 @@ namespace Elte.GeographyHtm
 
         public Range[] GetRanges(bool includeIntersection)
         {
-            var res = new Range[innerList.Count + partialList.Count];
+            var res = new List<Range>(innerList.Count + partialList.Count);
+            var prev = Range.Null;
 
-            int i = 0;
+            if (merge)
+            {
+                innerList.Sort();
+            }
 
             foreach (var t in innerList)
             {
-                res[i++] = t.GetRange(Constants.HtmLevel, Markup.Inner);
+                var r = t.GetRange(Constants.HtmLevel, Markup.Inner);
+
+                // Inner regions are merged, if requested
+                if (merge)
+                {
+                    if (prev == Range.Null)
+                    {
+                        prev = r;
+                    }
+                    else if (prev.Hi == r.Lo - 1)
+                    {
+                        prev.Hi = r.Hi;
+                    }
+                    else
+                    {
+                        res.Add(prev);
+                        prev = r;
+                    }
+                }
+                else
+                {
+                    res.Add(r);
+                }
+            }
+
+            // Append the very last
+            if (prev != Range.Null)
+            {
+                res.Add(prev);
             }
 
             foreach (var t in partialList)
@@ -179,10 +223,10 @@ namespace Elte.GeographyHtm
                     r.Intersection = g.STIntersection(t.GetTriangle(g));
                 }
 
-                res[i++] = r;
+                res.Add(r);
             }
 
-            return res;
+            return res.ToArray();
         }
     }
 }

@@ -61,9 +61,33 @@ namespace Elte.GeographyHtm
             this.intersection = range.intersection;
         }
 
+        public static Range Null
+        {
+            get
+            {
+                return new Range(Trixel.Null, Trixel.Null);
+            }
+        }
+
+        public static bool operator ==(Range range, Range other)
+        {
+            return range.lo == other.lo && range.hi == other.hi;
+        }
+
+        public static bool operator !=(Range range, Range other)
+        {
+            return range.lo != other.lo || range.hi != other.hi;
+        }
+
         public bool IsDisjoint(Range b)
         {
             return (this.hi < b.lo || b.hi < this.lo);
+        }
+
+        public override bool Equals(object obj)
+        {
+            var r = (Range)obj;
+            return this.lo == r.lo && this.hi == r.hi;
         }
 
         public int CompareTo(Range b)
