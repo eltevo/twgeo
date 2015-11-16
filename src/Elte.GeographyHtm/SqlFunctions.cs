@@ -50,16 +50,27 @@ namespace Elte.GeographyHtm
         [SqlFunction(Name = "CoverGeography",
                 TableDefinition = RangeTableDefinition, FillRowMethodName = RangeFillMethodName,
                 DataAccess = DataAccessKind.None, IsDeterministic = true, IsPrecise = false)]
-        public static IEnumerable Cover(SqlGeography geo, SqlBoolean includeIntersection)
+        public static IEnumerable Cover(SqlGeography geo)
         {
-            return CoverImpl(geo, includeIntersection);
+            return CoverImpl(geo, new SqlInt32(Constants.HtmCoverMaxLevel), SqlBoolean.True);
         }
 
-        private static IndexedValue<Range>[] CoverImpl(SqlGeography geo, SqlBoolean includeIntersection)
+        [SqlFunction(Name = "CoverGeographyAdvanced",
+                TableDefinition = RangeTableDefinition, FillRowMethodName = RangeFillMethodName,
+                DataAccess = DataAccessKind.None, IsDeterministic = true, IsPrecise = false)]
+        public static IEnumerable CoverAdvanced(SqlGeography geo, SqlInt32 maxLevel, SqlBoolean includeIntersection)
+        {
+            return CoverImpl(geo, maxLevel, includeIntersection);
+        }
+
+        private static IndexedValue<Range>[] CoverImpl(SqlGeography geo, SqlInt32 maxLevel, SqlBoolean includeIntersection)
         {
             try
             {
-                var cb = new CoverBuilder(geo);
+                var cb = new CoverBuilder(geo)
+                {
+                    MaxLevel = maxLevel.Value
+                };
                 cb.Execute();
 
                 return Index(cb.GetRanges(includeIntersection.Value));

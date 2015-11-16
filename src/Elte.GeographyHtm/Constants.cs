@@ -21,7 +21,7 @@ namespace Elte.GeographyHtm
         public const UInt64 HtmIDHighBit2 = 0x1000000000000000UL;
         public const int HtmIDMaxNameLength = 32;
 
-        public const int HtmCoverMaxLevel = 8;
+        public const int HtmCoverMaxLevel = 12;
 
         public const UInt64 S0 = 0x0000000000000008UL;
         public const UInt64 S1 = 0x0000000000000009UL;
