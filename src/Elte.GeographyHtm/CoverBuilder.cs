@@ -23,7 +23,8 @@ namespace Elte.GeographyHtm
         private int minLevel;
         private int maxLevel;
         private int maxSteps;
-        private bool merge;
+        private bool computeIntersection;
+        private bool mergeRanges;
 
         private ConcurrentDictionary<UInt64, SqlGeography> geoCache;
         private Queue<Trixel> trixelQueue;
@@ -55,10 +56,16 @@ namespace Elte.GeographyHtm
             set { maxLevel = value; }
         }
 
-        public bool Merge
+        public bool ComputeIntersection
         {
-            get { return merge; }
-            set { merge = value; }
+            get { return computeIntersection; }
+            set { computeIntersection = value; }
+        }
+
+        public bool MergeRanges
+        {
+            get { return mergeRanges; }
+            set { mergeRanges = value; }
         }
 
         public CoverBuilder(SqlGeography geo)
@@ -76,7 +83,8 @@ namespace Elte.GeographyHtm
             this.minLevel = -1;
             this.maxLevel = Constants.HtmCoverMaxLevel;
             this.maxSteps = -1;
-            this.merge = true;
+            this.computeIntersection = true;
+            this.mergeRanges = true;
         }
 
         private void InitializeBuild()
@@ -243,12 +251,12 @@ namespace Elte.GeographyHtm
             return true;
         }
 
-        public Range[] GetRanges(bool includeIntersection)
+        public Range[] GetRanges()
         {
             var res = new List<Range>(innerList.Count + partialList.Count);
             var prev = Range.Null;
 
-            if (merge)
+            if (mergeRanges)
             {
                 innerList.Sort();
             }
@@ -258,7 +266,7 @@ namespace Elte.GeographyHtm
                 var r = t.GetRange(Constants.HtmLevel, Markup.Inner);
 
                 // Inner regions are merged, if requested
-                if (merge)
+                if (mergeRanges)
                 {
                     if (prev == Range.Null)
                     {
@@ -290,10 +298,9 @@ namespace Elte.GeographyHtm
             {
                 var r = t.GetRange(Constants.HtmLevel, Markup.Partial);
 
-                if (includeIntersection)
+                if (computeIntersection)
                 {
-                    var g = GetParentGeo(t);
-                    r.Intersection = g.STIntersection(t.GetTriangle(g));
+                    r.Intersection = geoCache[t];
                 }
 
                 res.Add(r);

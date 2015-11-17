@@ -40,12 +40,13 @@ namespace Elte.GeographyHtm
 
             var b = new CoverBuilder(geo)
             {
-                MaxLevel = 3
+                MaxLevel = 3,
+                ComputeIntersection = true,
             };
 
             b.Execute();
 
-            var rr = b.GetRanges(true);
+            var rr = b.GetRanges();
         }
 
         [TestMethod]
@@ -116,11 +117,12 @@ FROM uk, ire";
             var b = new CoverBuilder(geo)
             {
                 MaxLevel = 10,
+                ComputeIntersection = true,
             };
 
             b.Execute();
 
-            var r = b.GetRanges(true);
-        }
+            var r = b.GetRanges();
+       }
     }
 }

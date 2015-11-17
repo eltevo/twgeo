@@ -65,20 +65,14 @@ namespace Elte.GeographyHtm
 
         private static IndexedValue<Range>[] CoverImpl(SqlGeography geo, SqlInt32 maxLevel, SqlBoolean includeIntersection)
         {
-            try
+            var cb = new CoverBuilder(geo)
             {
-                var cb = new CoverBuilder(geo)
-                {
-                    MaxLevel = maxLevel.Value
-                };
-                cb.Execute();
+                MaxLevel = maxLevel.Value,
+                ComputeIntersection = includeIntersection.Value,
+            };
+            cb.Execute();
 
-                return Index(cb.GetRanges(includeIntersection.Value));
-            }
-            catch (Exception)
-            {
-                return null;
-            }
+            return Index(cb.GetRanges());
         }
 
         protected static IndexedValue<T>[] Index<T>(IList<T> values)
