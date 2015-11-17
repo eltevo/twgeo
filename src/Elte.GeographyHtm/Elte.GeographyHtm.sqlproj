@@ -24,8 +24,9 @@
     <IncludeCompositeObjects>True</IncludeCompositeObjects>
     <TargetDatabaseSet>True</TargetDatabaseSet>
     <DefaultSchema>htm</DefaultSchema>
-    <Trustworthy>False</Trustworthy>
+    <Trustworthy>True</Trustworthy>
     <Recovery>SIMPLE</Recovery>
+    <PermissionSet>UNSAFE</PermissionSet>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <OutputPath>bin\Release\</OutputPath>

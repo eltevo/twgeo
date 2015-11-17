@@ -23,7 +23,7 @@ namespace Elte.GeographyHtm
         public void TestMethod1()
         {
             var geo = SqlGeography.STPolyFromText(
-                new SqlChars("POLYGON((-122.358 47.653, -122.348 47.649, -122.348 47.658, -122.358 47.658, -122.358 47.653))"), 
+                new SqlChars("POLYGON((-122.358 47.653, -122.348 47.649, -122.348 47.658, -122.358 47.658, -122.358 47.653))"),
                 4326);
 
             var b = new CoverBuilder(geo);
@@ -40,7 +40,7 @@ namespace Elte.GeographyHtm
 
             var b = new CoverBuilder(geo)
             {
-                MaxLevel = 3   
+                MaxLevel = 3
             };
 
             b.Execute();
@@ -113,7 +113,10 @@ FROM uk, ire";
             var geo = new SqlGeography();
             geo.Read(new BinaryReader(new MemoryStream(File.ReadAllBytes(@"..\..\..\..\data\ukire_reduced.bin"))));
 
-            var b = new CoverBuilder(geo);
+            var b = new CoverBuilder(geo)
+            {
+                MaxLevel = 10,
+            };
 
             b.Execute();
 

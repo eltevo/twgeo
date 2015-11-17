@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.SqlServer.Types;
 
@@ -8,24 +10,38 @@ namespace Elte.GeographyHtm
 {
     public class CoverBuilder
     {
+        private enum WorkerState
+        {
+            Work,
+            Wait,
+            Quit,
+        }
+
         private SqlGeography geo;
 
+        private int threads;
         private int minLevel;
         private int maxLevel;
         private int maxSteps;
         private bool merge;
 
-        private int currentLevel;
-        private int currentStep;
-
-        private Dictionary<UInt64, SqlGeography> geoCache;
+        private ConcurrentDictionary<UInt64, SqlGeography> geoCache;
         private Queue<Trixel> trixelQueue;
         private List<Trixel> innerList;
         private List<Trixel> partialList;
 
+        private CountdownEvent counter;
+        private UInt64 working;
+
         private UInt64 queueArea;
         private UInt64 innerArea;
         private UInt64 partialArea;
+
+        public int Threads
+        {
+            get { return threads; }
+            set { threads = value; }
+        }
 
         public int MinLevel
         {
@@ -56,13 +72,11 @@ namespace Elte.GeographyHtm
         {
             this.geo = null;
 
+            this.threads = Math.Min(64, Math.Max(1, Environment.ProcessorCount / 2));
             this.minLevel = -1;
             this.maxLevel = Constants.HtmCoverMaxLevel;
             this.maxSteps = -1;
             this.merge = true;
-
-            this.currentLevel = -1;
-            this.currentStep = -1;
         }
 
         private void InitializeBuild()
@@ -71,7 +85,7 @@ namespace Elte.GeographyHtm
             innerArea = 0;
             partialArea = 0;
 
-            geoCache = new Dictionary<ulong, SqlGeography>();
+            geoCache = new ConcurrentDictionary<UInt64, SqlGeography>();
             trixelQueue = new Queue<Trixel>();
 
             // Add initial octahedron
@@ -90,62 +104,121 @@ namespace Elte.GeographyHtm
         {
             InitializeBuild();
 
-            do
+            counter = new CountdownEvent(threads);
+            working = 0UL;
+
+            for (int i = 0; i < threads; i++)
             {
-                Step();
-
-                currentStep++;
+                var thread = new Thread(Worker);
+                thread.Start(i);
             }
-            while (EvaluateStopCriteria());
 
-            // All remaining trixels in the queue are partial
-            partialList.AddRange(trixelQueue);
+            counter.Wait();
+            counter.Dispose();
         }
 
-        private void Step()
+        private void Worker(object threadState)
         {
-            var trixel = trixelQueue.Dequeue();
-            var g = GetParentGeo(trixel);
-            var triangle = trixel.GetTriangle(g);
-            
-            queueArea -= trixel.Area;
-            currentLevel = trixel.Level;
+            int workerId = (int)threadState;
 
-            if (g.Filter(triangle))
+            while (true)
             {
-                // Compute intersection
-                var intersection = g.STIntersection(triangle);
-                var area = Math.Abs(intersection.STArea().Value - triangle.STArea().Value);
+                Trixel trixel = Trixel.Null;
+                WorkerState state;
 
-                if (area < triangle.STArea().Value * 1e-7)
+                // Try to take an item or check if all threads are finished
+                lock (trixelQueue)
                 {
-                    // Inner, whole triangle is inside
-                    innerList.Add(trixel);
-                    innerArea += trixel.Area;
-                }
-                else
-                {
-                    // Partial, store intersection in cache
-                    geoCache.Add(trixel.HtmID, intersection);
-
-                    if (currentLevel < maxLevel)
+                    if (trixelQueue.Count > 0)
                     {
-                        var v = trixel.Split();
-                        for (int i = 0; i < v.Length; i++)
+                        // There's work to do
+                        trixel = trixelQueue.Dequeue();
+
+                        working |= (1UL << workerId);
+                        state = WorkerState.Work;
+                        queueArea -= trixel.Area;
+                    }
+                    else if (working == 0)
+                    {
+                        // All threads have finished
+                        state = WorkerState.Quit;
+                    }
+                    else
+                    {
+                        // There are working threads
+                        state = WorkerState.Wait;
+                    }
+                }
+
+                if (state == WorkerState.Quit)
+                {
+                    // Signal event and quit
+                    counter.Signal();
+                    break;
+                }
+                else if (state == WorkerState.Wait)
+                {
+                    // Spin wait for the outcome of other threads
+                    Thread.SpinWait(100);
+                    continue;
+                }
+
+                var g = GetParentGeo(trixel);
+                var triangle = trixel.GetTriangle(g);
+
+                if (g.Filter(triangle))
+                {
+                    // Compute intersection
+                    var intersection = g.STIntersection(triangle);
+                    var area = Math.Abs(intersection.STArea().Value - triangle.STArea().Value);
+
+                    if (area < triangle.STArea().Value * 1e-7)
+                    {
+                        // Inner, whole triangle is inside
+                        lock (innerList)
                         {
-                            trixelQueue.Enqueue(v[i]);
-                            queueArea += v[i].Area;
+                            innerList.Add(trixel);
+                            innerArea += trixel.Area;
                         }
                     }
                     else
                     {
-                        partialList.Add(trixel);
-                        partialArea += trixel.Area;
+                        // Partial, store intersection in cache
+                        // this won't fail because HtmID is unique
+                        geoCache.TryAdd(trixel.HtmID, intersection);
+
+                        if (trixel.Level < maxLevel)
+                        {
+                            var v = trixel.Split();
+
+                            lock (trixelQueue)
+                            {
+                                for (int i = 0; i < v.Length; i++)
+                                {
+                                    trixelQueue.Enqueue(v[i]);
+                                    queueArea += v[i].Area;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            lock (partialList)
+                            {
+                                partialList.Add(trixel);
+                                partialArea += trixel.Area;
+                            }
+
+                        }
                     }
                 }
-            }
 
-            // Outer, do nothing
+                // Outer, do nothing
+
+                lock (trixelQueue)
+                {
+                    working &= ~(1UL << workerId);
+                }
+            }
         }
 
         private SqlGeography GetParentGeo(Trixel trixel)
