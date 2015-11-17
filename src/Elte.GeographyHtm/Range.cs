@@ -90,6 +90,11 @@ namespace Elte.GeographyHtm
             return this.lo == r.lo && this.hi == r.hi;
         }
 
+        public override int GetHashCode()
+        {
+            return this.lo.GetHashCode() ^ this.hi.GetHashCode();
+        }
+
         public int CompareTo(Range b)
         {
             return this.lo.CompareTo(b.lo);
